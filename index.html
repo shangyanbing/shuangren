@@ -1,414 +1,206 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>商砚冰游戏</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      user-select: none;
-      -webkit-touch-callout: none;
-    }
-    body {
-      background: #0b0b0b;
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-      padding: 12px;
-      transform: translateZ(0);
-    }
-    .game-container {
-      max-width: 720px;
-      width: 100%;
-      aspect-ratio: 3 / 4;
-      background: #1a1a1a;
-      border-radius: 32px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
-      overflow: hidden;
-      position: relative;
-      touch-action: manipulation;
-      transform: translateZ(0);
-      will-change: transform;
-    }
-    .video-wrapper {
-      position: relative;
-      width: 100%;
-      height: 100%;
-      background: #000;
-      transform: translateZ(0);
-      overflow: hidden;
-    }
-    /* ---- 所有视频统一叠放 ---- */
-    .video-wrapper video {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      background: #111;
-      pointer-events: none;
-      will-change: opacity, visibility;
-      transform: translateZ(0);
-    }
-    #coverVideo {
-      z-index: 1;
-      display: block;
-    }
-    /* 特效视频默认隐藏，z-index 高于底层 */
-    .special-video {
-      z-index: 4;
-      display: none;
-      opacity: 0;
-      visibility: hidden;
-    }
-    .special-video.show {
-      display: block;
-      opacity: 1;
-      visibility: visible;
-    }
-    /* 交互层 */
-    .interaction-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      touch-action: manipulation;
-      cursor: default;
-      z-index: 10;
-    }
-    .zone {
-      flex: 1;
-      width: 100%;
-      touch-action: manipulation;
-      transition: none;
-    }
-    .zone:active {
-      background: rgba(255, 255, 255, 0.03);
-    }
-    .game-title {
-      position: absolute;
-      top: 18px;
-      left: 0;
-      right: 0;
-      text-align: center;
-      color: rgba(255, 255, 255, 0.7);
-      font-weight: 600;
-      font-size: 1.5rem;
-      letter-spacing: 2px;
-      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.9);
-      z-index: 20;
-      pointer-events: none;
-      font-family: 'Trebuchet MS', 'PingFang SC', sans-serif;
-      padding: 0 16px;
-    }
-    @media (max-width: 480px) {
-      .game-title {
-        font-size: 1.2rem;
-        top: 12px;
-      }
-    }
-    .zone,
-    .video-wrapper {
-      -webkit-tap-highlight-color: transparent;
-    }
-    /* 音乐控件 */
-    .music-control {
-      position: absolute;
-      bottom: 18px;
-      left: 18px;
-      z-index: 30;
-      background: rgba(0, 0, 0, 0.55);
-      padding: 6px 12px 6px 10px;
-      border-radius: 30px;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: #eee;
-      font-size: 0.8rem;
-      pointer-events: auto;
-      cursor: pointer;
-      transition: background 0.1s;
-    }
-    .music-control:hover {
-      background: rgba(0, 0, 0, 0.75);
-    }
-    .music-control svg {
-      width: 18px;
-      height: 18px;
-      fill: currentColor;
-    }
-    .music-control .status-text {
-      font-weight: 400;
-      letter-spacing: 0.3px;
-    }
-    @media (max-width: 480px) {
-      .music-control {
-        bottom: 12px;
-        left: 12px;
-        padding: 4px 10px 4px 8px;
-        font-size: 0.7rem;
-      }
-      .music-control svg {
-        width: 15px;
-        height: 15px;
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>霜刃对决 · 下载中心</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            height: 100vh;
+            width: 100vw;
+            /* ★★★ 已修正为 cover.jpg ★★★ */
+            background-image: url('PAC/cover.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            font-family: 'Segoe UI', 'PingFang SC', Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.35);
+            z-index: 0;
+        }
+
+        .download-card {
+            position: relative;
+            z-index: 1;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-radius: 48px;
+            padding: 48px 56px;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            transition: transform 0.25s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .download-card:hover {
+            transform: scale(1.02);
+        }
+
+        .download-card h1 {
+            font-size: 2.4rem;
+            font-weight: 700;
+            color: #1e2a3a;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 4px rgba(255, 255, 255, 0.3);
+        }
+
+        .download-card .sub {
+            font-size: 1rem;
+            color: #3a4a5e;
+            opacity: 0.8;
+            margin-bottom: 32px;
+            border-bottom: 2px dashed rgba(0, 0, 0, 0.1);
+            padding-bottom: 16px;
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            width: 100%;
+            padding: 18px 28px;
+            border: none;
+            border-radius: 60px;
+            font-size: 1.3rem;
+            font-weight: 600;
+            text-decoration: none;
+            color: #fff;
+            background: #2c3e50;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s ease;
+            cursor: pointer;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.1);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .btn:hover::after {
+            opacity: 1;
+        }
+
+        .btn:active {
+            transform: scale(0.96);
+        }
+
+        .btn-pc {
+            background: linear-gradient(145deg, #1e6f9f, #0e4b6e);
+        }
+
+        .btn-pc:hover {
+            background: linear-gradient(145deg, #2583b8, #135a82);
+            box-shadow: 0 12px 28px rgba(30, 111, 159, 0.5);
+            transform: translateY(-3px);
+        }
+
+        .btn-mobile {
+            background: linear-gradient(145deg, #1f8b4c, #0f5e32);
+        }
+
+        .btn-mobile:hover {
+            background: linear-gradient(145deg, #26a05a, #14733d);
+            box-shadow: 0 12px 28px rgba(31, 139, 76, 0.5);
+            transform: translateY(-3px);
+        }
+
+        .btn .icon {
+            font-size: 1.8rem;
+            line-height: 1;
+        }
+
+        .file-meta {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 400;
+            opacity: 0.7;
+            margin-top: 4px;
+            letter-spacing: 0.5px;
+        }
+
+        .footer-note {
+            margin-top: 28px;
+            font-size: 0.8rem;
+            color: #4a5a6e;
+            opacity: 0.6;
+            border-top: 1px solid rgba(0, 0, 0, 0.06);
+            padding-top: 18px;
+        }
+
+        @media (max-width: 480px) {
+            .download-card {
+                padding: 32px 20px;
+                border-radius: 32px;
+            }
+            .download-card h1 {
+                font-size: 1.8rem;
+            }
+            .btn {
+                font-size: 1.0rem;
+                padding: 14px 20px;
+            }
+            .btn .icon {
+                font-size: 1.4rem;
+            }
+        }
+    </style>
 </head>
 <body>
-  <div class="game-container">
-    <div class="video-wrapper">
-      <!-- 底层循环视频 -->
-      <video id="coverVideo" src="VIDEO/cover.mp4" playsinline loop preload="auto" muted></video>
+    <div class="download-card">
+        <h1>⚔️ 霜刃对决</h1>
+        <div class="sub">选择你的平台，立即下载</div>
 
-      <!-- ===== 特效视频（预加载，独立元素） ===== -->
-      <video id="specialHead" class="special-video" src="VIDEO/head.mp4" playsinline preload="auto" muted></video>
-      <video id="specialStomach" class="special-video" src="VIDEO/stomach.mp4" playsinline preload="auto" muted></video>
-      <video id="specialLeg" class="special-video" src="VIDEO/leg.mp4" playsinline preload="auto" muted></video>
-      <video id="specialCombo" class="special-video" src="VIDEO/combo.mp4" playsinline preload="auto" muted></video>
+        <div class="button-group">
+            <a href="PAC/霜刃对决.zip" download class="btn btn-pc">
+                <span class="icon">🖥️</span>
+                电脑版
+                <span class="file-meta">.zip · 点击下载</span>
+            </a>
 
-      <!-- 交互层 -->
-      <div class="interaction-overlay" id="interactionOverlay">
-        <div class="zone" id="zoneHead" data-zone="head"></div>
-        <div class="zone" id="zoneStomach" data-zone="stomach"></div>
-        <div class="zone" id="zoneLeg" data-zone="leg"></div>
-      </div>
+            <a href="PAC/霜刃对决.apk" download class="btn btn-mobile">
+                <span class="icon">📱</span>
+                手机版
+                <span class="file-meta">.apk · 点击下载</span>
+            </a>
+        </div>
 
-      <div class="game-title">商砚冰游戏</div>
-
-      <div class="music-control" id="musicControl" title="点击切换音乐">
-        <svg viewBox="0 0 24 24" id="musicIcon">
-          <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-        </svg>
-        <span class="status-text" id="musicStatus">音乐 开</span>
-      </div>
+        <div class="footer-note">
+            📁 所有文件均位于 <strong>PAC</strong> 文件夹 · 背景图 cover.jpg
+        </div>
     </div>
-  </div>
-
-  <script>
-    (function() {
-      "use strict";
-
-      // ---------- DOM 引用 ----------
-      const coverVideo = document.getElementById('coverVideo');
-      const specialVideos = {
-        head: document.getElementById('specialHead'),
-        stomach: document.getElementById('specialStomach'),
-        leg: document.getElementById('specialLeg'),
-        combo: document.getElementById('specialCombo'),
-      };
-      const overlay = document.getElementById('interactionOverlay');
-
-      // ---------- 背景音乐 ----------
-      const bgMusic = new Audio('VIDEO/music.mp3');
-      bgMusic.loop = true;
-      bgMusic.volume = 0.5;
-      const musicControl = document.getElementById('musicControl');
-      const musicStatus = document.getElementById('musicStatus');
-      const musicIcon = document.getElementById('musicIcon');
-      let isMusicPlaying = false;
-
-      // ---------- 全局状态 ----------
-      let activeSpecialId = null; // 当前正在播放的特效ID
-      let timerId = null;
-      let longPressTimer = null;
-      let isLongPressTriggered = false;
-
-      // ---------- 工具函数 ----------
-      function clearAllTimers() {
-        if (timerId) { clearTimeout(timerId);
-          timerId = null; }
-        if (longPressTimer) { clearTimeout(longPressTimer);
-          longPressTimer = null; }
-      }
-
-      // 隐藏所有特效视频
-      function hideAllSpecials() {
-        Object.values(specialVideos).forEach(v => {
-          v.classList.remove('show');
-          v.pause();
-          v.currentTime = 0;
-        });
-        activeSpecialId = null;
-      }
-
-      // 恢复底层视频（特效结束后调用）
-      function resumeCover() {
-        hideAllSpecials();
-        coverVideo.style.display = 'block';
-        if (coverVideo.paused) {
-          coverVideo.play().catch(() => {});
-        }
-      }
-
-      // ---------- 播放特效（核心优化：切换显隐，不重新设置 src） ----------
-      function playSpecial(zoneType) {
-        if (activeSpecialId === zoneType) return; // 相同特效不重复触发
-
-        const video = specialVideos[zoneType];
-        if (!video) return;
-
-        clearAllTimers();
-
-        // 1. 暂停底层视频，释放解码资源给特效
-        coverVideo.pause();
-        coverVideo.style.display = 'none';
-
-        // 2. 隐藏所有特效，再显示目标特效（确保只有一个特效可见）
-        hideAllSpecials();
-
-        // 3. 显示并播放目标特效
-        video.classList.add('show');
-        video.currentTime = 0;
-        video.play().catch(() => {
-          // 如果播放失败，恢复底层
-          resumeCover();
-        });
-        activeSpecialId = zoneType;
-
-        // 4. 播放结束自动恢复
-        video.onended = () => {
-          video.onended = null;
-          resumeCover();
-        };
-        video.onerror = () => {
-          video.onerror = null;
-          resumeCover();
-        };
-      }
-
-      // ---------- 长按连击 ----------
-      function startLongPressDetection(zoneType) {
-        if (activeSpecialId) return;
-        clearTimeout(longPressTimer);
-        longPressTimer = setTimeout(() => {
-          isLongPressTriggered = true;
-          playSpecial('combo');
-        }, 600);
-      }
-
-      function cancelLongPressDetection() {
-        clearTimeout(longPressTimer);
-        longPressTimer = null;
-      }
-
-      // ---------- 区域交互绑定 ----------
-      function attachZoneEvents(zoneElement, zoneType) {
-        if (!zoneElement) return;
-        let pointerDownTime = 0;
-        let isPointerDown = false;
-
-        zoneElement.addEventListener('pointerdown', (e) => {
-          if (e.pointerType === 'mouse' && e.button !== 0) return;
-          pointerDownTime = Date.now();
-          isPointerDown = true;
-          isLongPressTriggered = false;
-          startLongPressDetection(zoneType);
-        }, { passive: true });
-
-        zoneElement.addEventListener('pointerup', (e) => {
-          if (e.pointerType === 'mouse' && e.button !== 0) return;
-          if (!isPointerDown) return;
-          isPointerDown = false;
-          cancelLongPressDetection();
-          const elapsed = Date.now() - pointerDownTime;
-          // 短按且未触发长按，且没有特效在播放
-          if (!isLongPressTriggered && elapsed < 600 && !activeSpecialId) {
-            playSpecial(zoneType);
-          }
-          isLongPressTriggered = false;
-        }, { passive: true });
-
-        zoneElement.addEventListener('pointerleave', () => {
-          isPointerDown = false;
-          cancelLongPressDetection();
-        }, { passive: true });
-
-        zoneElement.addEventListener('contextmenu', (e) => e.preventDefault());
-      }
-
-      attachZoneEvents(document.getElementById('zoneHead'), 'head');
-      attachZoneEvents(document.getElementById('zoneStomach'), 'stomach');
-      attachZoneEvents(document.getElementById('zoneLeg'), 'leg');
-
-      // ---------- 音乐控制 ----------
-      function toggleMusic() {
-        if (isMusicPlaying) {
-          bgMusic.pause();
-          isMusicPlaying = false;
-          musicStatus.textContent = '音乐 关';
-          musicIcon.innerHTML =
-            '<path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" /><path d="M4 17L20 5" stroke="currentColor" stroke-width="2" />';
-        } else {
-          bgMusic.play().catch(e => console.warn('音乐播放失败:', e));
-          isMusicPlaying = true;
-          musicStatus.textContent = '音乐 开';
-          musicIcon.innerHTML = '<path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />';
-        }
-      }
-
-      function tryAutoPlayMusic() {
-        bgMusic.play().then(() => {
-          isMusicPlaying = true;
-          musicStatus.textContent = '音乐 开';
-        }).catch(() => {
-          isMusicPlaying = false;
-          musicStatus.textContent = '音乐 关';
-        });
-      }
-      musicControl.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleMusic();
-      });
-
-      // ---------- 初始化 ----------
-      // 预加载：所有视频已设置 preload="auto"，浏览器会在空闲时加载
-      // 底层视频开始循环
-      coverVideo.play().catch(() => {});
-      tryAutoPlayMusic();
-
-      // 页面可见性变化处理
-      document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) {
-          if (isMusicPlaying && bgMusic.paused) bgMusic.play();
-          if (!activeSpecialId && coverVideo.paused) coverVideo.play();
-        } else {
-          coverVideo.pause();
-          // 特效视频暂停由各自控制，但可以全部暂停以节省资源
-          Object.values(specialVideos).forEach(v => v.pause());
-        }
-      });
-
-      // 首次用户交互唤醒音频
-      function firstUserTouch() {
-        if (!isMusicPlaying) toggleMusic();
-        document.removeEventListener('pointerdown', firstUserTouch);
-        document.removeEventListener('touchstart', firstUserTouch);
-      }
-      document.addEventListener('pointerdown', firstUserTouch, { once: true, passive: true });
-      document.addEventListener('touchstart', firstUserTouch, { once: true, passive: true });
-
-      // 页面卸载释放资源
-      window.addEventListener('beforeunload', () => {
-        clearAllTimers();
-        bgMusic.pause();
-        coverVideo.pause();
-        Object.values(specialVideos).forEach(v => v.pause());
-      });
-
-      // 暴露给调试（可选）
-      window.__debug = { playSpecial, resumeCover, specialVideos, coverVideo };
-    })();
-  </script>
 </body>
 </html>
