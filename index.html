@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>商砚冰游戏</title>
   <style>
-    /* 全局重置 & 性能优化：开启GPU加速，减少重绘回流 */
     * {
       margin: 0;
       padding: 0;
@@ -42,38 +41,38 @@
       height: 100%;
       background: #000;
       transform: translateZ(0);
+      overflow: hidden;
     }
-    #coverVideo {
-      display: block;
+    /* ---- 所有视频统一叠放 ---- */
+    .video-wrapper video {
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
       object-fit: cover;
       background: #111;
       pointer-events: none;
-      will-change: opacity;
-      transform: translateZ(0);
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 1;
-    }
-    /* 特效视频强制最高层级，确保完全覆盖底层 */
-    #specialVideo {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      background: #000;
-      pointer-events: none;
       will-change: opacity, visibility;
       transform: translateZ(0);
-      z-index: 5;
+    }
+    #coverVideo {
+      z-index: 1;
+      display: block;
+    }
+    /* 特效视频默认隐藏，z-index 高于底层 */
+    .special-video {
+      z-index: 4;
+      display: none;
       opacity: 0;
       visibility: hidden;
     }
-    /* 透明交互层 */
+    .special-video.show {
+      display: block;
+      opacity: 1;
+      visibility: visible;
+    }
+    /* 交互层 */
     .interaction-overlay {
       position: absolute;
       top: 0;
@@ -110,7 +109,6 @@
       pointer-events: none;
       font-family: 'Trebuchet MS', 'PingFang SC', sans-serif;
       padding: 0 16px;
-      backdrop-filter: none;
     }
     @media (max-width: 480px) {
       .game-title {
@@ -122,7 +120,7 @@
     .video-wrapper {
       -webkit-tap-highlight-color: transparent;
     }
-    /* 背景音乐控件 - 左下角 */
+    /* 音乐控件 */
     .music-control {
       position: absolute;
       bottom: 18px;
@@ -171,18 +169,23 @@
   <div class="game-container">
     <div class="video-wrapper">
       <!-- 底层循环视频 -->
-      <video id="coverVideo" src="VIDEO/cover.mp4" playsinline loop preload="auto"></video>
-      <!-- 顶层特效视频（固定最高层级） -->
-      <video id="specialVideo" playsinline preload="auto"></video>
+      <video id="coverVideo" src="VIDEO/cover.mp4" playsinline loop preload="auto" muted></video>
+
+      <!-- ===== 特效视频（预加载，独立元素） ===== -->
+      <video id="specialHead" class="special-video" src="VIDEO/head.mp4" playsinline preload="auto" muted></video>
+      <video id="specialStomach" class="special-video" src="VIDEO/stomach.mp4" playsinline preload="auto" muted></video>
+      <video id="specialLeg" class="special-video" src="VIDEO/leg.mp4" playsinline preload="auto" muted></video>
+      <video id="specialCombo" class="special-video" src="VIDEO/combo.mp4" playsinline preload="auto" muted></video>
+
       <!-- 交互层 -->
       <div class="interaction-overlay" id="interactionOverlay">
         <div class="zone" id="zoneHead" data-zone="head"></div>
         <div class="zone" id="zoneStomach" data-zone="stomach"></div>
         <div class="zone" id="zoneLeg" data-zone="leg"></div>
       </div>
-      <!-- 标题 -->
+
       <div class="game-title">商砚冰游戏</div>
-      <!-- 音乐控制 -->
+
       <div class="music-control" id="musicControl" title="点击切换音乐">
         <svg viewBox="0 0 24 24" id="musicIcon">
           <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
@@ -191,152 +194,137 @@
       </div>
     </div>
   </div>
+
   <script>
     (function() {
       "use strict";
-      // DOM 引用
+
+      // ---------- DOM 引用 ----------
       const coverVideo = document.getElementById('coverVideo');
-      const specialVideo = document.getElementById('specialVideo');
+      const specialVideos = {
+        head: document.getElementById('specialHead'),
+        stomach: document.getElementById('specialStomach'),
+        leg: document.getElementById('specialLeg'),
+        combo: document.getElementById('specialCombo'),
+      };
       const overlay = document.getElementById('interactionOverlay');
-      // 背景音乐
+
+      // ---------- 背景音乐 ----------
       const bgMusic = new Audio('VIDEO/music.mp3');
       bgMusic.loop = true;
       bgMusic.volume = 0.5;
-      // 音乐UI
       const musicControl = document.getElementById('musicControl');
       const musicStatus = document.getElementById('musicStatus');
       const musicIcon = document.getElementById('musicIcon');
-      // 视频映射
-      const VIDEO_BASE = 'VIDEO/';
-      const VIDEO_MAP = {
-        head: 'head.mp4',
-        stomach: 'stomach.mp4',
-        leg: 'leg.mp4',
-        combo: 'combo.mp4'
-      };
-      // 全局状态
-      let isPlayingSpecial = false;
+      let isMusicPlaying = false;
+
+      // ---------- 全局状态 ----------
+      let activeSpecialId = null; // 当前正在播放的特效ID
       let timerId = null;
       let longPressTimer = null;
       let isLongPressTriggered = false;
-      let isMusicPlaying = false;
 
-      // 清空所有计时器
+      // ---------- 工具函数 ----------
       function clearAllTimers() {
-        if (timerId) clearTimeout(timerId);
-        if (longPressTimer) clearTimeout(longPressTimer);
-        timerId = null;
-        longPressTimer = null;
+        if (timerId) { clearTimeout(timerId);
+          timerId = null; }
+        if (longPressTimer) { clearTimeout(longPressTimer);
+          longPressTimer = null; }
       }
 
-      // 音乐控制
-      function toggleMusic() {
-        if (isMusicPlaying) {
-          bgMusic.pause();
-          isMusicPlaying = false;
-          musicStatus.textContent = '音乐 关';
-          musicIcon.innerHTML = '<path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" /><path d="M4 17L20 5" stroke="currentColor" stroke-width="2" />';
-        } else {
-          bgMusic.play().catch(e => console.warn('音乐播放失败:', e));
-          isMusicPlaying = true;
-          musicStatus.textContent = '音乐 开';
-          musicIcon.innerHTML = '<path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />';
+      // 隐藏所有特效视频
+      function hideAllSpecials() {
+        Object.values(specialVideos).forEach(v => {
+          v.classList.remove('show');
+          v.pause();
+          v.currentTime = 0;
+        });
+        activeSpecialId = null;
+      }
+
+      // 恢复底层视频（特效结束后调用）
+      function resumeCover() {
+        hideAllSpecials();
+        coverVideo.style.display = 'block';
+        if (coverVideo.paused) {
+          coverVideo.play().catch(() => {});
         }
       }
-      function tryAutoPlayMusic() {
-        bgMusic.play().then(() => {
-          isMusicPlaying = true;
-          musicStatus.textContent = '音乐 开';
-        }).catch(() => {
-          isMusicPlaying = false;
-          musicStatus.textContent = '音乐 关';
-        });
-      }
-      musicControl.addEventListener('click', e => {
-        e.stopPropagation();
-        toggleMusic();
-      });
 
-      // 【修复核心】恢复底层背景视频，彻底清理特效残留画面
-      function resumeCover() {
-        // 隐藏特效视频，双重控制杜绝画面残留
-        specialVideo.style.opacity = '0';
-        specialVideo.style.visibility = 'hidden';
-        specialVideo.pause();
-        specialVideo.currentTime = 0;
-        specialVideo.src = ''; // 清空视频源，消除最后一帧残影
-        // 恢复底层循环视频
-        coverVideo.style.display = 'block';
-        if (coverVideo.paused) coverVideo.play().catch(() => {});
-        isPlayingSpecial = false;
-      }
+      // ---------- 播放特效（核心优化：切换显隐，不重新设置 src） ----------
+      function playSpecial(zoneType) {
+        if (activeSpecialId === zoneType) return; // 相同特效不重复触发
 
-      // 【修复核心】播放特效，完全盖住底层视频
-      function playSpecialVideo(zoneType) {
-        if (isPlayingSpecial) return;
-        const videoFile = VIDEO_MAP[zoneType];
-        if (!videoFile) return;
+        const video = specialVideos[zoneType];
+        if (!video) return;
 
         clearAllTimers();
-        isPlayingSpecial = true;
 
-        // 暂停并隐藏底层视频，保证特效完全覆盖
+        // 1. 暂停底层视频，释放解码资源给特效
         coverVideo.pause();
         coverVideo.style.display = 'none';
 
-        // 加载并显示顶层特效视频
-        specialVideo.src = VIDEO_BASE + videoFile;
-        specialVideo.style.opacity = '1';
-        specialVideo.style.visibility = 'visible';
-        specialVideo.currentTime = 0;
-        specialVideo.play().catch(() => resumeCover());
+        // 2. 隐藏所有特效，再显示目标特效（确保只有一个特效可见）
+        hideAllSpecials();
 
-        // 播放结束回调
-        specialVideo.onended = () => {
-          specialVideo.onended = null;
+        // 3. 显示并播放目标特效
+        video.classList.add('show');
+        video.currentTime = 0;
+        video.play().catch(() => {
+          // 如果播放失败，恢复底层
+          resumeCover();
+        });
+        activeSpecialId = zoneType;
+
+        // 4. 播放结束自动恢复
+        video.onended = () => {
+          video.onended = null;
           resumeCover();
         };
-        specialVideo.onerror = () => {
-          specialVideo.onerror = null;
+        video.onerror = () => {
+          video.onerror = null;
           resumeCover();
         };
       }
 
-      // 长按连击
-      function startLongPressDetection() {
-        if (isPlayingSpecial) return;
+      // ---------- 长按连击 ----------
+      function startLongPressDetection(zoneType) {
+        if (activeSpecialId) return;
         clearTimeout(longPressTimer);
         longPressTimer = setTimeout(() => {
           isLongPressTriggered = true;
-          playSpecialVideo('combo');
+          playSpecial('combo');
         }, 600);
       }
+
       function cancelLongPressDetection() {
         clearTimeout(longPressTimer);
         longPressTimer = null;
       }
 
-      // 区域点击事件
+      // ---------- 区域交互绑定 ----------
       function attachZoneEvents(zoneElement, zoneType) {
         if (!zoneElement) return;
         let pointerDownTime = 0;
         let isPointerDown = false;
 
-        zoneElement.addEventListener('pointerdown', e => {
+        zoneElement.addEventListener('pointerdown', (e) => {
           if (e.pointerType === 'mouse' && e.button !== 0) return;
           pointerDownTime = Date.now();
           isPointerDown = true;
-          startLongPressDetection();
+          isLongPressTriggered = false;
+          startLongPressDetection(zoneType);
         }, { passive: true });
 
-        zoneElement.addEventListener('pointerup', e => {
+        zoneElement.addEventListener('pointerup', (e) => {
           if (e.pointerType === 'mouse' && e.button !== 0) return;
           if (!isPointerDown) return;
           isPointerDown = false;
           cancelLongPressDetection();
           const elapsed = Date.now() - pointerDownTime;
-          if (!isLongPressTriggered && elapsed < 600 && !isPlayingSpecial) {
-            playSpecialVideo(zoneType);
+          // 短按且未触发长按，且没有特效在播放
+          if (!isLongPressTriggered && elapsed < 600 && !activeSpecialId) {
+            playSpecial(zoneType);
           }
           isLongPressTriggered = false;
         }, { passive: true });
@@ -346,29 +334,62 @@
           cancelLongPressDetection();
         }, { passive: true });
 
-        zoneElement.addEventListener('contextmenu', e => e.preventDefault());
+        zoneElement.addEventListener('contextmenu', (e) => e.preventDefault());
       }
 
       attachZoneEvents(document.getElementById('zoneHead'), 'head');
       attachZoneEvents(document.getElementById('zoneStomach'), 'stomach');
       attachZoneEvents(document.getElementById('zoneLeg'), 'leg');
 
-      // 初始化
+      // ---------- 音乐控制 ----------
+      function toggleMusic() {
+        if (isMusicPlaying) {
+          bgMusic.pause();
+          isMusicPlaying = false;
+          musicStatus.textContent = '音乐 关';
+          musicIcon.innerHTML =
+            '<path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" /><path d="M4 17L20 5" stroke="currentColor" stroke-width="2" />';
+        } else {
+          bgMusic.play().catch(e => console.warn('音乐播放失败:', e));
+          isMusicPlaying = true;
+          musicStatus.textContent = '音乐 开';
+          musicIcon.innerHTML = '<path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />';
+        }
+      }
+
+      function tryAutoPlayMusic() {
+        bgMusic.play().then(() => {
+          isMusicPlaying = true;
+          musicStatus.textContent = '音乐 开';
+        }).catch(() => {
+          isMusicPlaying = false;
+          musicStatus.textContent = '音乐 关';
+        });
+      }
+      musicControl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleMusic();
+      });
+
+      // ---------- 初始化 ----------
+      // 预加载：所有视频已设置 preload="auto"，浏览器会在空闲时加载
+      // 底层视频开始循环
       coverVideo.play().catch(() => {});
       tryAutoPlayMusic();
 
-      // 页面切换可见性处理
+      // 页面可见性变化处理
       document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
           if (isMusicPlaying && bgMusic.paused) bgMusic.play();
-          if (!isPlayingSpecial && coverVideo.paused) coverVideo.play();
+          if (!activeSpecialId && coverVideo.paused) coverVideo.play();
         } else {
           coverVideo.pause();
-          specialVideo.pause();
+          // 特效视频暂停由各自控制，但可以全部暂停以节省资源
+          Object.values(specialVideos).forEach(v => v.pause());
         }
       });
 
-      // 首次交互唤醒音频
+      // 首次用户交互唤醒音频
       function firstUserTouch() {
         if (!isMusicPlaying) toggleMusic();
         document.removeEventListener('pointerdown', firstUserTouch);
@@ -382,8 +403,11 @@
         clearAllTimers();
         bgMusic.pause();
         coverVideo.pause();
-        specialVideo.pause();
+        Object.values(specialVideos).forEach(v => v.pause());
       });
+
+      // 暴露给调试（可选）
+      window.__debug = { playSpecial, resumeCover, specialVideos, coverVideo };
     })();
   </script>
 </body>
